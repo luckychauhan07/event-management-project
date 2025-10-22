@@ -49,7 +49,10 @@ module.exports = class User {
 	// static fetchAll() {
 	// 	return db.execute("SELECT * FROM homes");
 	// }
-	// static deleteById(homeId) {
-	// 	return db.execute("DELETE FROM homes WHERE idhomes =?", [homeId]);
-	// }
+	static updateById(userId) {
+		return db.execute(
+			"UPDATE user SET token_version = token_version + 1 WHERE id = ?",
+			[userId]
+		);
+	}
 };

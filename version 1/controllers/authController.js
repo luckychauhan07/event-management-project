@@ -1,6 +1,7 @@
 const bcryptjs = require("bcryptjs");
 const { check, validationResult } = require("express-validator");
 const User = require("../models/authModel");
+const { generateToken } = require("./jwtTokenController");
 
 exports.postSignup = [
 	check("firstName")
@@ -41,7 +42,7 @@ exports.postSignup = [
 		if (!errors.isEmpty()) {
 			return res.status(401).json(errors);
 		}
-		const { firstName, lastName, email, age, gender, password, id } =
+		let { firstName, lastName, email, age, gender, password, id } =
 			req.body;
 		const hashedPassword = await bcryptjs.hash(password, 12);
 		const user = new User(
@@ -70,41 +71,54 @@ exports.postSignup = [
 	},
 ];
 
-exports.postSignin = (req, res, next) => {
+exports.postSignin = async (req, res, next) => {
 	const { email, password } = req.body;
-	if (email) {
-		User.findUserByEmail(email)
-			.then((user) => {
-				console.log(user[0]);
-				bcrypt
-					.compare(password, user[0][0].password)
-					.then((isMatch) => {
-						if (isMatch) {
-							req.user = user[0][0];
-							return res.status(201).json({
-								message: "user find",
-								data: req.body,
-							});
-						}
-						res.status(401).json({
-							message: "user not found",
-							data: req.body,
-						});
-					})
-					.catch((err) => {
-						res.status(401).json({
-							message: "user not found",
-							data: req.body,
-							err: err,
-						});
-					});
-			})
-			.catch((err) => {
-				res.status(401).json({
-					message: "user not found",
-					data: req.body,
-					err: err,
-				});
+	if (!email || !password) {
+		return res
+			.status(401)
+			.json({ message: "Email and password are required" });
+	}
+	try {
+		const userDataObj = await User.findUserByEmail(email);
+		const user = userDataObj[0][0];
+		const isMatch = await bcryptjs.compare(password, user.password);
+		if (isMatch) {
+			console.log("pasword matched");
+			// create token for user
+			const token = generateToken({
+				email,
+				userId: user.id,
+				tokenVersion: user.token_version,
 			});
+			return res.status(201).json({
+				message: "user find",
+				data: req.body,
+				token,
+			});
+		}
+		return res.status(401).json({
+			message: "invalid crediantials",
+			data: req.body,
+		});
+	} catch (err) {
+		console.log(err);
+		return res.status(401).json({
+			message: "user not found",
+			data: req.body,
+			err: err,
+		});
+	}
+};
+
+exports.postSignout = async (req, res, next) => {
+	try {
+		const userId = req.user.userId;
+		await User.updateById(userId);
+
+		// ✅ Redirect to home page (no JSON here)
+		return res.redirect("/");
+	} catch (err) {
+		console.error(err);
+		return res.status(500).json({ message: "Logout failed", error: err });
 	}
 };
