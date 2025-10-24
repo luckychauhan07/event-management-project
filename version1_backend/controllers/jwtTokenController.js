@@ -3,7 +3,13 @@ const User = require("../models/authModel");
 require("dotenv").config();
 
 exports.jwtAuthMiddleware = async (req, res, next) => {
-	const token = req.headers.authorization.split(" ")[1];
+	const tokenFound = req.headers.authorization;
+	if (!tokenFound) {
+		return res
+			.status(401)
+			.json({ message: "token not found", isLoggedIn: false });
+	}
+	const token = tokenFound.split(" ")[1];
 	if (token) {
 		console.log("jwt token found");
 		try {

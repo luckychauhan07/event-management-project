@@ -38,6 +38,7 @@ exports.postSignup = [
 		return true;
 	}),
 	async (req, res, next) => {
+		console.log(req.body);
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
 			return res.status(401).json(errors);
@@ -59,6 +60,7 @@ exports.postSignup = [
 				console.log("Insert result:", result);
 				return res.status(201).json({
 					message: "user saved done",
+
 					data: req.body,
 				});
 			})
@@ -93,6 +95,7 @@ exports.postSignin = async (req, res, next) => {
 			return res.status(201).json({
 				message: "user find",
 				data: req.body,
+				result: "success",
 				token,
 			});
 		}

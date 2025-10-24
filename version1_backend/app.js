@@ -7,6 +7,7 @@ require("dotenv").config();
 // INTERNAL MODULES
 const authRouter = require("./routes/authRoutes");
 const { jwtAuthMiddleware } = require("./controllers/jwtTokenController");
+const eventRouter = require("./routes/eventRoutes");
 
 const app = express();
 
@@ -26,6 +27,8 @@ app.get("/", (req, res, next) => {
 app.use("/auth", authRouter);
 
 app.use(jwtAuthMiddleware);
+
+app.use("/event", eventRouter);
 
 app.use("/lucky", (req, res, next) => {
 	console.log(req.user);
