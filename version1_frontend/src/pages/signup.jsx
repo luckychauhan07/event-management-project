@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
 function Signup() {
 	const [formData, setFormData] = useState({
@@ -12,13 +13,29 @@ function Signup() {
 		gender: "",
 	});
 
+	const navigate = useNavigate();
 	const handleChange = (e) => {
-		console.log(e.target.name, e.target.value);
 		setFormData({ ...formData, [e.target.name]: e.target.value });
 	};
 
 	const handleSubmitBtn = async (e) => {
 		e.preventDefault();
+		if (
+			!formData.age ||
+			!formData.confirmPassword ||
+			!formData.email ||
+			!formData.firstName ||
+			!formData.gender ||
+			!formData.lastName ||
+			!formData.password
+		) {
+			toast.error("All fields are required");
+			return;
+		}
+		if (formData.password !== formData.confirmPassword) {
+			toast.error("Passwords do not match");
+			return; // ⛔ STOP again
+		}
 		const url = "http://localhost:3000/auth/signup";
 		try {
 			const response = await fetch(url, {
@@ -29,7 +46,17 @@ function Signup() {
 				body: JSON.stringify(formData),
 			});
 			const result = await response.json();
-			if (result) console.log(result);
+			if (result.status === "success") {
+				toast.success("user registered successfully");
+				setTimeout(() => {
+					navigate("/login");
+				}, 2000);
+			} else if (result.status === "failed") {
+				toast.error(result.message);
+			} else if (!result) {
+				toast.error("Internal server error ");
+			}
+			console.log(result);
 		} catch (error) {
 			toast.error("❌ " + error.message);
 		}

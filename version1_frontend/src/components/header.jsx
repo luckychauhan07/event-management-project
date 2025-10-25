@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import { useEffect } from "react";
 
 const Header = () => {
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
+	useEffect(() => {}, []);
 	const toggleMobileMenu = () => {
 		setIsMobileMenuOpen(!isMobileMenuOpen);
 	};

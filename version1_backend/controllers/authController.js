@@ -41,7 +41,12 @@ exports.postSignup = [
 		console.log(req.body);
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
-			return res.status(401).json(errors);
+			const err = errors.array().map((e) => e.msg);
+			return res.status(401).json({
+				err,
+				status: "failed",
+				message: "validation error",
+			});
 		}
 		let { firstName, lastName, email, age, gender, password, id } =
 			req.body;
@@ -59,16 +64,24 @@ exports.postSignup = [
 			.then(([result]) => {
 				console.log("Insert result:", result);
 				return res.status(201).json({
-					message: "user saved done",
-
-					data: req.body,
+					message: "user registration done",
+					status: "success",
+					data: {
+						firstName,
+						lastName,
+						email,
+						id,
+						gender,
+					},
 				});
 			})
 			.catch((err) => {
 				console.log(err);
-				return res
-					.status(401)
-					.json({ message: "email is already registered" });
+				return res.status(401).json({
+					message: "email is already registered",
+					status: "failed",
+					error: err.message,
+				});
 			});
 	},
 ];
@@ -76,9 +89,10 @@ exports.postSignup = [
 exports.postSignin = async (req, res, next) => {
 	const { email, password } = req.body;
 	if (!email || !password) {
-		return res
-			.status(401)
-			.json({ message: "Email and password are required" });
+		return res.status(401).json({
+			message: "Email and password are required",
+			status: "failed",
+		});
 	}
 	try {
 		const userDataObj = await User.findUserByEmail(email);
@@ -93,20 +107,25 @@ exports.postSignin = async (req, res, next) => {
 				tokenVersion: user.token_version,
 			});
 			return res.status(201).json({
-				message: "user find",
-				data: req.body,
-				result: "success",
+				message: "user logged in successfully",
+				data: {
+					userId: user.id,
+					firstName: user.firstName,
+					lastName: user.lastName,
+				},
+				status: "success",
 				token,
 			});
 		}
 		return res.status(401).json({
 			message: "invalid crediantials",
 			data: req.body,
+			status: "failed",
 		});
 	} catch (err) {
-		console.log(err);
 		return res.status(401).json({
-			message: "user not found",
+			message: err.msg,
+			status: "failed",
 			data: req.body,
 			err: err,
 		});
@@ -123,5 +142,56 @@ exports.postSignout = async (req, res, next) => {
 	} catch (err) {
 		console.error(err);
 		return res.status(500).json({ message: "Logout failed", error: err });
+	}
+};
+
+exports.verifyToken = async (req, res, next) => {
+	console.log(req.url);
+	const tokenFound = req.headers.authorization;
+	if (!tokenFound) {
+		return res.status(401).json({
+			message: "token not found",
+			isLoggedIn: false,
+			status: false,
+		});
+	}
+	const token = tokenFound.split(" ")[1];
+	if (token) {
+		console.log("jwt token found");
+		try {
+			const decoded = jwt.verify(token, process.env.secret_key);
+			const userDataObj = await User.findUserByEmail(decoded.email);
+			const user = userDataObj[0][0];
+			if (!user) {
+				return res.status(400).json({
+					message: "user not found",
+					status: false,
+				});
+			}
+			if (user.token_version !== decoded.tokenVersion) {
+				return res.status(400).json({
+					error: "Token invalidated, please log in again",
+					status: false,
+				});
+			}
+			req.user = decoded;
+			return res.status(201).json({
+				error: "Token validated successfully",
+				status: true,
+			});
+		} catch (err) {
+			console.log(err);
+			return res.status(400).json({
+				message: "token expired or invalid token",
+				err,
+				status: false,
+			});
+		}
+	} else {
+		console.log("jwt token not found");
+		return res.status(400).json({
+			message: "token not found",
+			status: false,
+		});
 	}
 };

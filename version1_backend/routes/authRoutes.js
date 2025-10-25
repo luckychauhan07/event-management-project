@@ -9,8 +9,10 @@ const authRouter = express.Router();
 
 authRouter.post("/signup", authController.postSignup);
 
-authRouter.post("/signin", authController.postSignin);
+authRouter.post("/login", authController.postSignin);
 
 authRouter.post("/signout", jwtAuthMiddleware, authController.postSignout);
+
+authRouter.get("/verify", jwtAuthMiddleware);
 
 module.exports = authRouter;
